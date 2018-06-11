@@ -11,8 +11,12 @@ export default class App extends React.Component {
       userLocation: 'YOUR CURRENT LOCATION = ?',
       latitude: null,
       longitude: null,
+      city: null,
+      province: null,
       error: null,
-      btnActive: 'black'
+      btnActive: 'black',
+      msg: 'Click the compass to find the current weather!',
+      msgType: styles.info
     };
 
     this._onPressButton = this._onPressButton.bind(this);
@@ -29,7 +33,10 @@ export default class App extends React.Component {
           error: null,
         });
       },
-      (error) => this.setState({ error: error.message }),
+      (error) => {
+        this.setState({ error: error.message });
+        Alert.alert('Unable to find location: ' + this.state.error)
+      },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 1000, distanceFilter: 10 },
     );
   }
@@ -39,13 +46,11 @@ export default class App extends React.Component {
   }
 
   _onPressButton() {
-    Alert.alert('Got Your Current Location')
-    this.setState({
-      userLocation: this.state.latitude + ':' + this.state.longitude
-    });
+    Alert.alert('Location Found!')
 
+    var wQuery = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22' + this.state.city + '%2C%20' + this.state.province + '%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
 
-      fetch('http://freegeoip.net/json/')
+      fetch('https://maps.googleapis.com/maps/api/geocode/json?latlng=' + this.state.latitude + ','+ this.state.longitude +'&key=AIzaSyAmDoLVdlMG0a3vOCOiE3mu-ISOzMBX2Ks')
       .then(
         response => {
           if (response.status !== 200) {
@@ -57,20 +62,38 @@ export default class App extends React.Component {
           // Examine the text in the response
           response.json().then(data => {
 
-            // this.setState({
-            //   userip: data.ip,
-            //   city: data.city.toLowerCase(),
-            //   country: data.country_code.toLowerCase(),
-            //   province: data.region_code.toLowerCase()
-            // });
-            //
-            // var wQuery = 'https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20weather.forecast%20where%20woeid%20in%20(select%20woeid%20from%20geo.places(1)%20where%20text%3D%22' + this.state.city + '%2C%20' + this.state.province + '%22)&format=json&env=store%3A%2F%2Fdatatables.org%2Falltableswithkeys';
-            //
-            // this.setState({
-            //   query: wQuery,
-            // });
+            console.log(data);
+
+            this.setState({
+              userLocation: data.results[1].address_components[2].long_name,
+              msg: data.results["0"].formatted_address,
+              msgType: styles.active,
+              province: data.results[1].address_components[4],
+              city: data.results[1].address_components[2].long_name
+            });
+
+
+
+            console.log(data.results[1].address_components[2].long_name);
+
+
           });
         }
+      ).then(
+
+        fetch(wQuery).then(
+          weatherData => {
+            if(weatherData.status !== 200){
+              console.log('Error retrieving weather information, status code: ' + weatherData.status);
+              return;
+            }
+
+            console.log(weatherData);
+
+          }
+        )
+
+
       )
 
 
@@ -81,7 +104,7 @@ export default class App extends React.Component {
       <View style={styles.container}>
         <FontAwesome onPress={this._onPressButton} style={styles.hero} name="compass" size={128} color="black" />
         <Text style={styles.subheading}>{this.state.userLocation}</Text>
-        <Text style={styles.info}>Click the compass to find the current weather!</Text>
+        <Text style={this.state.msgType}>{this.state.msg}</Text>
       </View>
     );
   }
@@ -109,6 +132,9 @@ const styles = StyleSheet.create({
   },
   active: {
     color: 'black',
-    marginTop: 10
+    marginTop: 10,
+    fontSize: 19,
+    textAlign: 'center',
+    padding: 30
   },
 });
