@@ -39,7 +39,7 @@ export default class App extends React.Component {
   }
 
   _onPressButton() {
-    Alert.alert('Got Your Current Location!')
+    Alert.alert('Got Your Current Location')
     this.setState({
       userLocation: this.state.latitude + ':' + this.state.longitude
     });
